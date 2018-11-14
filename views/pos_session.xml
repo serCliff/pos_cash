@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+
+        <!--<record model="ir.ui.view" id="pos_session_billing_tree">-->
+            <!--<field name="name">pos.session.billing.tree</field>-->
+            <!--<field name="model">pos.session</field>-->
+            <!--<field name="inherit_id" ref="point_of_sale.view_pos_session_tree"/>-->
+            <!--<field name="arch" type="xml">-->
+
+                <!--<xpath expr="//tree" position="inside">-->
+                    <!--<field name="cash_register_total_entry_encoding" string="Cash"/>-->
+                    <!--<field name="bank_amount" string="Banks"/>-->
+                    <!--<field name="daily_billing" string="TOTAL"/>-->
+                <!--</xpath>-->
+            <!--</field>-->
+        <!--</record>-->
+
+        <record model="ir.ui.view" id="pos_session_cash_count">
+            <field name="name">pos.session.cash</field>
+            <field name="model">pos.session</field>
+            <field name="inherit_id" ref="point_of_sale.view_pos_session_form"/>
+            <field name="arch" type="xml">
+
+                <xpath expr="//field[@name='cash_register_total_entry_encoding']" position="after">
+                    <label for="daily_invoices_amount" attrs="{'invisible' : [('state', '=', 'opening_control')]}" string="+ Facturas" class="oe_force_bold oe_opening_total"/>
+                    <field name="daily_invoices_amount" nolabel="1" attrs="{'invisible' : [('state', '=', 'opening_control')]}" class="oe_bold oe_pos_total" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                    <label for="external_transactions_amount" attrs="{'invisible' : [('state', '=', 'opening_control')]}" string="- Salidas a Bancos" class="oe_force_bold oe_opening_total"/>
+                    <field name="external_transactions_amount" nolabel="1" attrs="{'invisible' : [('state', '=', 'opening_control')]}" class="oe_bold oe_pos_total" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                </xpath>
+                <xpath expr="//separator" position="replace"/>
+                <field name="statement_ids" position="replace" >
+                    <notebook>
+                        <page name="bank" string="Bancos">
+                            <separator string="Salidas a bancos"/>
+                            <field name="external_transactions" context="{'default_payment_type': 'transfer'}">
+                                <tree string="Daily" editable="bottom">
+                                    <field name="payment_type" invisible="1"/>
+                                    <field name="payment_date" readonly="1"/>
+                                    <field name="communication"/>
+                                    <field name="payment_method_id" invisible="1"/>
+                                    <field name="amount" sum="Total"/>
+                                    <field name="journal_id" invisible="1"/>
+                                    <field name="destination_journal_id" invisible="1"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page name="invoices" string="Facturas">
+                            <separator string="Facturas diarias"/>
+                            <field name="daily_invoices" editable="bottom" readonly="1">
+                                <tree string="Daily">
+                                    <field name="payment_date"/>
+                                    <field name="communication"/>
+                                    <field name="partner_id"/>
+                                    <field name="amount" sum="Total"/>
+                                    <field name="journal_id" invisible="1"/>
+                                </tree>
+                            </field>
+
+                        </page>
+                        <page name="summary" string="Resumen">
+                            <separator string="Summary by Payment Methods" attrs="{'invisible' : [('state', '=', 'opening_control')]}"/>
+                            <field name="statement_ids" attrs="{'invisible' : [('state', '=', 'opening_control')]}">
+                                <tree string="Statements">
+                                    <field name="name"/>
+                                    <field name="journal_id"/>
+                                    <field name="balance_start"/>
+                                    <field name="total_entry_encoding"/>
+                                    <field name="balance_end_real"/>
+                                    <field name="difference"/>
+                                    <field name="currency_id" groups="base.group_multi_currency"/>
+                                    <field name="state"/>
+                                </tree>
+                            </field>
+                        </page>
+
+                    </notebook>
+                </field>
+
+
+            </field>
+        </record>
+
+        <record id="action_account_payments" model="ir.actions.act_window">
+            <field name="name">Todos los Pagos</field>
+            <field name="res_model">account.payment</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,kanban,form,graph</field>
+            <field name="view_id" ref="account.view_account_payment_tree"/>
+        </record>
+
+        <menuitem action="action_account_payments" id="menu_action_account_payments" parent="account.menu_finance_receivables_documents" sequence="20"/>
+
+  </data>
+</odoo>
