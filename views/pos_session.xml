@@ -28,6 +28,12 @@
                     <label for="external_transactions_amount" attrs="{'invisible' : [('state', '=', 'opening_control')]}" string="- Salidas a Bancos" class="oe_force_bold oe_opening_total"/>
                     <field name="external_transactions_amount" nolabel="1" attrs="{'invisible' : [('state', '=', 'opening_control')]}" class="oe_bold oe_pos_total" widget="monetary" options="{'currency_field': 'currency_id'}"/>
                 </xpath>
+
+                <xpath expr="//field[@name='cash_register_balance_end']" position="after">
+                    <label for="daily_billing" attrs="{'invisible' : [('state', '=', 'opening_control')]}" string="TOTAL" class="oe_force_bold oe_opening_total"/>
+                    <field name="daily_billing" nolabel="1" attrs="{'invisible' : [('state', '=', 'opening_control')]}" class="oe_bold oe_pos_total" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                </xpath>
+
                 <xpath expr="//separator" position="replace"/>
                 <field name="statement_ids" position="replace" >
                     <notebook>

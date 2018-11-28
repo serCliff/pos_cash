@@ -14,13 +14,13 @@ class PosSession(models.Model):
     daily_invoices = fields.Many2many("account.payment", compute="_compute_daily_invoices",
                                       string="Facturas del Día", help="Facturas cobradas en el día")
 
-    external_transactions_amount = fields.Monetary("Salidas de Efectivo", compute="_compute_external_transactions",
+    external_transactions_amount = fields.Monetary("Salidas de Efectivo", compute="_compute_daily_invoices",
                                                    help="Total de salidas de efectivos a bancos")
     external_transactions = fields.One2many("account.payment", "pos_transactions",
                                             string="Resumen salidas a bancos",
                                             help="Crear para generar salida a bancos")
 
-    daily_billing = fields.Monetary("TOTAL")
+    daily_billing = fields.Monetary("TOTAL", compute="_compute_daily_invoices")
 
     @api.onchange('external_transactions')
     def _compute_daily_invoices(self):
@@ -37,26 +37,71 @@ class PosSession(models.Model):
                 if possible.has_invoices:
                     last_invoices.append(possible.id)
             session.daily_invoices = self.env['account.payment'].browse(last_invoices)
+
+            # Invoice payment transactions
             total_daily = 0.0
             for payment_reg in session.daily_invoices:
                 total_daily += payment_reg.amount
             session.daily_invoices_amount = total_daily
-            session.cash_register_balance_end += total_daily
-            session.cash_register_difference -= total_daily
 
-    @api.onchange('external_transactions')
-    def _compute_external_transactions(self):
-        for session in self:
+            # Bank transactions
             session.external_transactions_amount = 0.0
             total_transactions = 0.0
             for transaction in session.external_transactions:
                 total_transactions += transaction.amount
             session.external_transactions_amount = total_transactions
-            session.cash_register_balance_end -= total_transactions
-            session.cash_register_difference += total_transactions
 
+            # Update cash journal
+            session.cash_register_id.balance_external_transaction = total_transactions - total_daily
+            session.cash_register_id.total_entry_encoding = sum(
+                [line.amount for line in session.cash_register_id.line_ids])
+            session.cash_register_id.balance_end = session.cash_register_id.balance_start + session.cash_register_id.total_entry_encoding - session.cash_register_id.balance_external_transaction
+            session.cash_register_id.difference = session.cash_register_id.balance_end_real - session.cash_register_id.balance_end
 
+            # Update daily billing
+            session.daily_billing = session.cash_register_total_entry_encoding + total_daily
+            session.daily_billing += sum([line.balance_end for line in session.statement_ids if line.journal_id.type != 'cash'])
 
+class AccountBankStatement(models.Model):
+
+    @api.one
+    @api.depends('line_ids', 'balance_start', 'line_ids.amount', 'balance_end_real', 'balance_external_transaction')
+    def _end_balance(self):
+        self.total_entry_encoding = sum([line.amount for line in self.line_ids])
+        self.balance_end = self.balance_start + self.total_entry_encoding - self.balance_external_transaction
+        self.difference = self.balance_end_real - self.balance_end
+
+    _inherit = "account.bank.statement"
+
+    balance_external_transaction = fields.Monetary('External Transactions')
+
+class AccountBankStmtCashWizard(models.Model):
+    """
+    Account Bank Statement popup that allows entering cash details.
+    """
+    _inherit = 'account.bank.statement.cashbox'
+    _description = 'Account Bank Statement Cashbox Details'
+
+    # cashbox_lines_ids = fields.One2many('account.cashbox.line', 'cashbox_id', string='Cashbox Lines')
+
+    @api.multi
+    def validate(self):
+        bnk_stmt_id = self.env.context.get('bank_statement_id', False) or self.env.context.get('active_id', False)
+        bnk_stmt = self.env['account.bank.statement'].browse(bnk_stmt_id)
+        total = 0.0
+        for lines in self.cashbox_lines_ids:
+            total += lines.subtotal
+
+        pos_session = self.env['pos.session'].browse(self._context.get('active_id'))
+
+        external_trans = pos_session.external_transactions_amount - pos_session.daily_invoices_amount
+        if self.env.context.get('balance', False) == 'start':
+            # starting balance
+            bnk_stmt.write({'balance_start': total, 'balance_external_transaction': external_trans, 'cashbox_start_id': self.id})
+        else:
+            # closing balance
+            bnk_stmt.write({'balance_end_real': total, 'balance_external_transaction': external_trans, 'cashbox_end_id': self.id})
+        return {'type': 'ir.actions.act_window_close'}
 
 
 class AccountPaymentPos(models.Model):
