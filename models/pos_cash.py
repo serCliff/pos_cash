@@ -30,7 +30,7 @@ class PosSession(models.Model):
             possible_invoices = self.env['account.payment'].search([
                 ('payment_date', '=', session.start_at),
                 ('company_id', '=', session.config_id.company_id.id),
-                ('payment_type', '=', 'inbound'),
+                # ('payment_type', '=', 'inbound'),
                 ('journal_id.type', '=', 'cash')])
             last_invoices = []
             for possible in possible_invoices:
@@ -41,7 +41,10 @@ class PosSession(models.Model):
             # Invoice payment transactions
             total_daily = 0.0
             for payment_reg in session.daily_invoices:
-                total_daily += payment_reg.amount
+                if payment_reg.payment_type == "inbound":
+                    total_daily += payment_reg.amount
+                else:
+                    total_daily -= payment_reg.amount
             session.daily_invoices_amount = total_daily
 
             # Bank transactions
