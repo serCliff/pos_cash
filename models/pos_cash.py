@@ -12,13 +12,14 @@ class PosSession(models.Model):
     daily_invoices_amount = fields.Monetary("Efectivo facturas", compute="_compute_daily_invoices",
                                             help="Total cobrado en efectivo de facturas en el día")
     daily_invoices = fields.Many2many("account.payment", compute="_compute_daily_invoices",
-                                      string="Facturas del Día", help="Facturas cobradas en el día")
+                                      string="Facturas del Día", help="Facturas cobradas en el día",
+                                      store=True)
 
     external_transactions_amount = fields.Monetary("Salidas de Efectivo", compute="_compute_daily_invoices",
                                                    help="Total de salidas de efectivos a bancos")
     external_transactions = fields.One2many("account.payment", "pos_transactions",
                                             string="Resumen salidas a bancos",
-                                            help="Crear para generar salida a bancos")
+                                            help="Crear para generar salida a bancos", store=True)
 
     daily_billing = fields.Monetary("TOTAL", compute="_compute_daily_invoices")
 
@@ -35,7 +36,11 @@ class PosSession(models.Model):
             last_invoices = []
             for possible in possible_invoices:
                 if possible.has_invoices:
-                    last_invoices.append(possible.id)
+                    # pdb.set_trace()
+                    for finished_sessions in self.env['pos.session'].search([('id', '!=', session.id)]):
+                        if not possible in finished_sessions.daily_invoices:
+                            last_invoices.append(possible.id)
+                            break
             session.daily_invoices = self.env['account.payment'].browse(last_invoices)
 
             # Invoice payment transactions

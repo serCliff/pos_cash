@@ -54,7 +54,7 @@
                         <page name="invoices" string="Facturas">
                             <separator string="Facturas diarias"/>
                             <field name="daily_invoices" editable="bottom" readonly="1">
-                                <tree string="Daily" decoration-danger="payment_type='inbound'" decoration-info="">
+                                <tree string="Daily" decoration-danger="payment_type == 'outbound'" >
                                     <field name="payment_date"/>
                                     <field name="communication"/>
                                     <field name="partner_id"/>
