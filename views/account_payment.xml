@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+
+        <record model="ir.ui.view" id="account_payment_pos_link">
+            <field name="name">account.payment.pos.link</field>
+            <field name="model">account.payment</field>
+            <field name="inherit_id" ref="account.view_account_payment_form"/>
+            <field name="arch" type="xml">
+
+                <xpath expr="//field[@name='payment_method_code']" position="after">
+                    <field name="pos_invoice_transactions" groups="account.group_account_manager"/>
+                </xpath>
+
+                <field name="payment_method_id" position="attributes">
+                    <attribute name="groups">account.group_account_manager</attribute>
+                </field>
+
+                <field name="payment_transaction_id" position="attributes">
+                    <attribute name="groups">account.group_account_manager</attribute>
+                </field>
+
+                <button name="post" position="attributes">
+                    <attribute name="groups">account.group_account_manager</attribute>
+                </button>
+
+                <button name="action_draft" position="attributes">
+                    <attribute name="groups">account.group_account_manager</attribute>
+                </button>
+
+            </field>
+        </record>
+
+        <record model="ir.ui.view" id="account_payment_pos_permissions">
+            <field name="name">account.payment.pos.permissions</field>
+            <field name="model">account.payment</field>
+            <field name="inherit_id" ref="account_cancel.payment_cancel_form_inherit"/>
+            <field name="arch" type="xml">
+
+                <button name="cancel" position="attributes">
+                    <attribute name="groups">account.group_account_manager</attribute>
+                </button>
+
+            </field>
+        </record>
+
+        <record id="action_account_payments" model="ir.actions.act_window">
+            <field name="name">Todos los Pagos</field>
+            <field name="res_model">account.payment</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,kanban,form,graph</field>
+            <field name="view_id" ref="account.view_account_payment_tree"/>
+            <field name="secuence">80</field>
+        </record>
+
+        <menuitem action="action_account_payments" id="menu_action_account_payments" parent="account.menu_finance_receivables" sequence="20"/>
+
+  </data>
+</odoo>
+

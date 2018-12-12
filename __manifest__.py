@@ -24,11 +24,13 @@
     'version': '0.1',
 
     # any module necessary for this one to work correctly
-    'depends': ['point_of_sale', 'account'],
+    'depends': ['point_of_sale', 'account','account_cancel'],
 
     # always loaded
     'data': [
+        'views/account_payment.xml',
         'views/pos_session.xml',
+        'views/pos_config_kanban.xml',
     ],
 
 }

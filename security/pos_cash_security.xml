@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+<data>
+
+    <!-- groups -->
+    <record model="ir.module.category" id="module_pos_cash">
+      <field name="name">Pos Cash</field>
+      <field name="description">User access level for Pos Cash</field>
+      <field name="sequence">6</field>
+    </record>
+
+    <record model="res.groups" id="group_pos_cash_manager">
+        <field name="name">Manager</field>
+        <field name="category_id" ref="pos_cash.module_pos_cash"/>
+    </record>
+
+    <record model="res.groups" id="group_pos_cash_admin">
+        <field name="name">Administrador</field>
+        <field name="category_id" ref="pos_cash.module_pos_cash"/>
+        <field name="implied_ids" eval="[(4, ref('pos_cash.group_pos_cash_manager'))]"/>
+    </record>
+
+
+
+    <!--<record model="res.groups" id="group_pos_cash_user">-->
+      <!--<field name="name">Empleado</field>-->
+      <!--<field name="category_id" ref="pos_cash.module_pos_cash"/>-->
+    <!--</record>-->
+
+</data>
+</odoo>

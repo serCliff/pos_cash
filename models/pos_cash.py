@@ -11,37 +11,38 @@ class PosSession(models.Model):
 
     daily_invoices_amount = fields.Monetary("Efectivo facturas", compute="_compute_daily_invoices",
                                             help="Total cobrado en efectivo de facturas en el día")
-    daily_invoices = fields.Many2many("account.payment", compute="_compute_daily_invoices",
-                                      string="Facturas del Día", help="Facturas cobradas en el día",
-                                      store=True)
+    daily_invoices = fields.One2many("account.payment", "pos_invoice_transactions",
+                                     string="Facturas del Día", help="Facturas cobradas en el día")
 
     external_transactions_amount = fields.Monetary("Salidas de Efectivo", compute="_compute_daily_invoices",
                                                    help="Total de salidas de efectivos a bancos")
     external_transactions = fields.One2many("account.payment", "pos_transactions",
                                             string="Resumen salidas a bancos",
-                                            help="Crear para generar salida a bancos", store=True)
+                                            help="Crear para generar salida a bancos")
 
     daily_billing = fields.Monetary("TOTAL", compute="_compute_daily_invoices")
 
+    bank_amount = fields.Monetary(
+        compute="_compute_bank_journals",
+        digits=0,
+        string="Bank Transactions",
+        help="Amount of bank journal transactions.",
+        readonly=True)
+
     @api.onchange('external_transactions')
     def _compute_daily_invoices(self):
+        """
+        - Este metodo computa los valores que tienen que estar en cada uno de los fields.
+        - En primer lugar computa el valor que suman los ingresos en efectivo de las facturas.
+        - Después las salidas a bancos
+        - Por último actualiza los valores que tienen que estar en el diario de caja para que
+        se pueda cerrar la caja correctamente
+        - Finalmente se calcula el final de los beneficios del día.
+
+        """
+
         for session in self:
             session.daily_invoices_amount = 0
-            session.daily_invoices = False
-            possible_invoices = self.env['account.payment'].search([
-                ('payment_date', '=', session.start_at),
-                ('company_id', '=', session.config_id.company_id.id),
-                # ('payment_type', '=', 'inbound'),
-                ('journal_id.type', '=', 'cash')])
-            last_invoices = []
-            for possible in possible_invoices:
-                if possible.has_invoices:
-                    # pdb.set_trace()
-                    for finished_sessions in self.env['pos.session'].search([('id', '!=', session.id)]):
-                        if not possible in finished_sessions.daily_invoices:
-                            last_invoices.append(possible.id)
-                            break
-            session.daily_invoices = self.env['account.payment'].browse(last_invoices)
 
             # Invoice payment transactions
             total_daily = 0.0
@@ -60,15 +61,51 @@ class PosSession(models.Model):
             session.external_transactions_amount = total_transactions
 
             # Update cash journal
-            session.cash_register_id.balance_external_transaction = total_transactions - total_daily
-            session.cash_register_id.total_entry_encoding = sum(
+            balance_external_transaction = total_transactions - total_daily
+            total_entry_encoding = sum(
                 [line.amount for line in session.cash_register_id.line_ids])
-            session.cash_register_id.balance_end = session.cash_register_id.balance_start + session.cash_register_id.total_entry_encoding - session.cash_register_id.balance_external_transaction
-            session.cash_register_id.difference = session.cash_register_id.balance_end_real - session.cash_register_id.balance_end
+            balance_end = session.cash_register_id.balance_start + total_entry_encoding \
+                                                   - balance_external_transaction
+            difference = session.cash_register_id.balance_end_real - balance_end
+
+            session.cash_register_id.write({'balance_external_transaction': balance_external_transaction,
+                                            'total_entry_encoding': total_entry_encoding,
+                                            'balance_end': balance_end,
+                                            'difference': difference})
 
             # Update daily billing
             session.daily_billing = session.cash_register_total_entry_encoding + total_daily
-            session.daily_billing += sum([line.balance_end for line in session.statement_ids if line.journal_id.type != 'cash'])
+            session.daily_billing += sum([line.balance_end for line in session.statement_ids
+                                          if line.journal_id.type != 'cash'])
+
+
+    @api.depends('config_id', 'statement_ids')
+    def _compute_bank_journals(self):
+        """
+            Este metodo calcula el dinero que se ha cobrado a través de la caja en tarjeta, etc
+            y se lo asigna a una variable para poder visualizarlo fácilmente.
+        """
+        for session in self:
+            total_bank_amount = 0
+            total_daily_amount = 0
+            for journal in session.statement_ids:
+                if journal.journal_type == 'bank':
+                    total_bank_amount += journal.total_entry_encoding
+                total_daily_amount += journal.total_entry_encoding
+            session.bank_amount = total_bank_amount
+            session.daily_billing = total_daily_amount
+
+    @api.multi
+    def action_pos_session_validate(self):
+        """
+            En este método se van a validar las salidas a bancos para que queden correctamente computadas.
+        """
+        for session in self:
+            # Validamos cada una de las transacciones a bancos que se han realizado desde el punto de venta
+            for transaction in session.external_transactions:
+                transaction.post()
+
+        return super(PosSession, self).action_pos_session_validate()
 
 class AccountBankStatement(models.Model):
 
@@ -83,6 +120,8 @@ class AccountBankStatement(models.Model):
 
     balance_external_transaction = fields.Monetary('External Transactions')
 
+
+
 class AccountBankStmtCashWizard(models.Model):
     """
     Account Bank Statement popup that allows entering cash details.
@@ -94,6 +133,10 @@ class AccountBankStmtCashWizard(models.Model):
 
     @api.multi
     def validate(self):
+        """
+            Método que sobreescribe la validación de valores de la caja
+            para sumar también las facturas y salidas a bancos
+        """
         bnk_stmt_id = self.env.context.get('bank_statement_id', False) or self.env.context.get('active_id', False)
         bnk_stmt = self.env['account.bank.statement'].browse(bnk_stmt_id)
         total = 0.0
@@ -102,44 +145,17 @@ class AccountBankStmtCashWizard(models.Model):
 
         pos_session = self.env['pos.session'].browse(self._context.get('active_id'))
 
+        # Conteo de las transacciones externas y las facturas
         external_trans = pos_session.external_transactions_amount - pos_session.daily_invoices_amount
         if self.env.context.get('balance', False) == 'start':
             # starting balance
-            bnk_stmt.write({'balance_start': total, 'balance_external_transaction': external_trans, 'cashbox_start_id': self.id})
+            bnk_stmt.write({'balance_start': total, 'balance_external_transaction': external_trans,
+                            'cashbox_start_id': self.id})
         else:
             # closing balance
-            bnk_stmt.write({'balance_end_real': total, 'balance_external_transaction': external_trans, 'cashbox_end_id': self.id})
+            bnk_stmt.write({'balance_end_real': total, 'balance_external_transaction': external_trans,
+                            'cashbox_end_id': self.id})
+
         return {'type': 'ir.actions.act_window_close'}
 
 
-class AccountPaymentPos(models.Model):
-    _inherit = "account.payment"
-
-    pos_transactions = fields.Many2one("pos.session")
-
-    @api.onchange('payment_type')
-    def onch_set_journal(self):
-        for payment in self:
-            if payment.payment_type == "transfer":
-                origin_id = self.env['account.journal'].search(
-                    ['&', ('journal_user', '=', True), ('type', '=', 'cash'),
-                     ('company_id', '=', self.env.user.company_id.id)])[0]
-                destination_id = self.env['account.journal'].search(
-                    ['&', ('journal_user', '=', True), ('type', '=', 'bank'),
-                     ('company_id', '=', self.env.user.company_id.id)])[0]
-                # pdb.set_trace()
-                payment_method = self.env['account.payment.method'].search([('code', '=', 'manual'), ('payment_type', '=', 'outbound')])[0]
-                payment.journal_id = origin_id.id
-                payment.destination_journal_id = destination_id.id
-                payment.payment_method_id = payment_method.id
-
-    @api.onchange('amount')
-    def check_positive_value(self):
-        for payment in self:
-            if payment.amount < 0:
-                payment.amount = 0
-                return {'warning': {
-                                    'title': 'Advertencia!!',
-                                    'message': 'No se pueden incluir cantidades negativas.',
-                                    }
-                            }

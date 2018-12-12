@@ -2,19 +2,19 @@
 <odoo>
     <data>
 
-        <!--<record model="ir.ui.view" id="pos_session_billing_tree">-->
-            <!--<field name="name">pos.session.billing.tree</field>-->
-            <!--<field name="model">pos.session</field>-->
-            <!--<field name="inherit_id" ref="point_of_sale.view_pos_session_tree"/>-->
-            <!--<field name="arch" type="xml">-->
-
-                <!--<xpath expr="//tree" position="inside">-->
-                    <!--<field name="cash_register_total_entry_encoding" string="Cash"/>-->
-                    <!--<field name="bank_amount" string="Banks"/>-->
-                    <!--<field name="daily_billing" string="TOTAL"/>-->
-                <!--</xpath>-->
-            <!--</field>-->
-        <!--</record>-->
+        <record model="ir.ui.view" id="pos_session_cash_count_tree">
+            <field name="name">pos.session.cash.tree</field>
+            <field name="model">pos.session</field>
+            <field name="inherit_id" ref="point_of_sale.view_pos_session_tree"/>
+            <field name="arch" type="xml">
+                <field name="state" position="after">
+                    <field name="cash_register_total_entry_encoding" string="Efectivo Caja" sum="Trans."/>
+                    <field name="bank_amount" string="Tarjeta" sum="Tarjeta"/>
+                    <field name="daily_invoices_amount" sum="FV."/>
+                    <field name="daily_billing" sum="TOTAL"/>
+                </field>
+            </field>
+        </record>
 
         <record model="ir.ui.view" id="pos_session_cash_count">
             <field name="name">pos.session.cash</field>
@@ -22,18 +22,43 @@
             <field name="inherit_id" ref="point_of_sale.view_pos_session_form"/>
             <field name="arch" type="xml">
 
+                <!--Ocultamos los botones de poner y sacar dinero para todos-->
+                <xpath expr="//button[@icon='fa-level-down']" position="attributes">
+                    <attribute name="invisible">1</attribute>
+                </xpath>
+
+                <xpath expr="//button[@icon='fa-level-up']" position="attributes">
+                    <attribute name="invisible">1</attribute>
+                </xpath>
+
+                <xpath expr="//button[@name='open_cashbox'][2]" position="attributes">
+                    <attribute name="attrs">{'invisible':['|', ('cash_control', '=', False), ('state', '=', 'opening_control')]}</attribute>
+                </xpath>
+
+                <!--Campos nuevos-->
                 <xpath expr="//field[@name='cash_register_total_entry_encoding']" position="after">
                     <label for="daily_invoices_amount" attrs="{'invisible' : [('state', '=', 'opening_control')]}" string="+ Facturas" class="oe_force_bold oe_opening_total"/>
                     <field name="daily_invoices_amount" nolabel="1" attrs="{'invisible' : [('state', '=', 'opening_control')]}" class="oe_bold oe_pos_total" widget="monetary" options="{'currency_field': 'currency_id'}"/>
-                    <label for="external_transactions_amount" attrs="{'invisible' : [('state', '=', 'opening_control')]}" string="- Salidas a Bancos" class="oe_force_bold oe_opening_total"/>
-                    <field name="external_transactions_amount" nolabel="1" attrs="{'invisible' : [('state', '=', 'opening_control')]}" class="oe_bold oe_pos_total" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                    <label for="external_transactions_amount" attrs="{'invisible' : [('state', 'in', ['opening_control','closed'])]}" string="- Salidas a Bancos" class="oe_force_bold oe_opening_total"/>
+                    <field name="external_transactions_amount" nolabel="1" attrs="{'invisible' : [('state', 'in', ['opening_control','closed'])]}" class="oe_bold oe_pos_total" widget="monetary" options="{'currency_field': 'currency_id'}"/>
                 </xpath>
 
                 <xpath expr="//field[@name='cash_register_balance_end']" position="after">
-                    <label for="daily_billing" attrs="{'invisible' : [('state', '=', 'opening_control')]}" string="TOTAL" class="oe_force_bold oe_opening_total"/>
-                    <field name="daily_billing" nolabel="1" attrs="{'invisible' : [('state', '=', 'opening_control')]}" class="oe_bold oe_pos_total" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                    <label for="bank_amount" attrs="{'invisible' : [('state', '!=', 'closed')]}" string="+ Tarjeta" class="oe_force_bold oe_opening_total"/>
+                    <field name="bank_amount" nolabel="1" attrs="{'invisible' : [('state', '!=', 'closed')]}" class="oe_bold oe_pos_total" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                    <label for="daily_billing" attrs="{'invisible' : [('state', '!=', 'closed')]}" string="= TOTAL" class="oe_force_bold oe_subtotal_footer_separator"/>
+                    <field name="daily_billing" nolabel="1" attrs="{'invisible' : [('state', '!=', 'closed')]}" class="oe_bold oe_subtotal_footer_separator" widget="monetary" options="{'currency_field': 'currency_id'}"/>
                 </xpath>
 
+                <!--Modificacnte para que se oculten cuando la caja está cerrada-->
+                <xpath expr="//label[@for='cash_register_balance_end']" position="attributes">
+                    <attribute name="attrs">{'invisible' : [('state', 'in', ['opening_control','closed'])]}</attribute>
+                </xpath>
+                <xpath expr="//field[@name='cash_register_balance_end']" position="attributes">
+                    <attribute name="attrs">{'invisible' : [('state', 'in', ['opening_control','closed'])]}</attribute>
+                </xpath>
+
+                <!--Organizacion del contenido con pestañas en la parte inferior del form-->
                 <xpath expr="//separator" position="replace"/>
                 <field name="statement_ids" position="replace" >
                     <notebook>
@@ -88,15 +113,15 @@
             </field>
         </record>
 
-        <record id="action_account_payments" model="ir.actions.act_window">
-            <field name="name">Todos los Pagos</field>
-            <field name="res_model">account.payment</field>
-            <field name="view_type">form</field>
-            <field name="view_mode">tree,kanban,form,graph</field>
-            <field name="view_id" ref="account.view_account_payment_tree"/>
-        </record>
+        <!--<record id="action_account_payments" model="ir.actions.act_window">-->
+            <!--<field name="name">Todos los Pagos</field>-->
+            <!--<field name="res_model">account.payment</field>-->
+            <!--<field name="view_type">form</field>-->
+            <!--<field name="view_mode">tree,kanban,form,graph</field>-->
+            <!--<field name="view_id" ref="account.view_account_payment_tree"/>-->
+        <!--</record>-->
 
-        <menuitem action="action_account_payments" id="menu_action_account_payments" parent="account.menu_finance_receivables_documents" sequence="20"/>
+        <!--<menuitem action="action_account_payments" id="menu_action_account_payments" parent="account.menu_finance_receivables_documents" sequence="20"/>-->
 
   </data>
 </odoo>
