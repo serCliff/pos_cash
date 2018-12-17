@@ -64,7 +64,7 @@
                     <notebook>
                         <page name="bank" string="Bancos">
                             <separator string="Salidas a bancos"/>
-                            <field name="external_transactions" context="{'default_payment_type': 'transfer'}">
+                            <field name="external_transactions" context="{'default_payment_type': 'transfer'}" attrs="{'readonly': [('state', '!=', 'closed')]}">
                                 <tree string="Daily" editable="bottom">
                                     <field name="payment_type" invisible="1"/>
                                     <field name="payment_date" readonly="1"/>
