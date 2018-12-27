@@ -8,7 +8,7 @@
             <field name="inherit_id" ref="base.view_users_form"/>
             <field name="arch" type="xml">
                 <field name="barcode" position="before">
-                    <field name="pos_id"/>
+                    <field name="pos_id" required="True"/>
                 </field>
             </field>
         </record>

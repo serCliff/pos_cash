@@ -49,6 +49,7 @@
             <field name="res_model">account.payment</field>
             <field name="view_type">form</field>
             <field name="view_mode">tree,kanban,form,graph</field>
+            <field name="groups" eval="[(4, ref('am_personalizations.group_manager'))]"/>
             <field name="view_id" ref="account.view_account_payment_tree"/>
             <field name="secuence">80</field>
         </record>
