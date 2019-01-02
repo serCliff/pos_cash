@@ -9,8 +9,12 @@ class PosSession(models.Model):
 
     bank_amount = fields.Monetary("Transacciones Bancarias", help="Pedidos y facturas cobrados por bancos")
 
-    daily_invoices_amount = fields.Monetary("Efectivo facturas", compute="_compute_daily_invoices",
+    daily_invoices_amount = fields.Monetary("Facturas a efectivo", compute="_compute_daily_invoices",
                                             help="Total cobrado en efectivo de facturas en el día")
+
+    daily_invoices_amount_bank = fields.Monetary("Facturas a bancos", compute="_compute_daily_invoices",
+                                            help="Total cobrado a través de bancos de facturas en el día")
+
     daily_invoices = fields.One2many("account.payment", "pos_invoice_transactions",
                                      string="Facturas del Día", help="Facturas cobradas en el día")
 
@@ -44,24 +48,33 @@ class PosSession(models.Model):
         for session in self:
             session.daily_invoices_amount = 0
 
-            # Invoice payment transactions
-            total_daily = 0.0
+            # Transacciones de pagos en cash de facturas
+            total_daily_cash = 0.0
+            total_daily_bank = 0.0
             for payment_reg in session.daily_invoices:
                 if payment_reg.payment_type == "inbound":
-                    total_daily += payment_reg.amount
+                    if payment_reg.journal_id.type == "cash":
+                        total_daily_cash += payment_reg.amount
+                    else:
+                        total_daily_bank += payment_reg.amount
                 else:
-                    total_daily -= payment_reg.amount
-            session.daily_invoices_amount = total_daily
+                    if payment_reg.journal_id.type == "cash":
+                        total_daily_cash -= payment_reg.amount
+                    else:
+                        total_daily_bank -= payment_reg.amount
 
-            # Bank transactions
+            session.daily_invoices_amount = total_daily_cash
+            session.daily_invoices_amount_bank = total_daily_bank
+
+            # Transacciones bancarias (salidas a bancos)
             session.external_transactions_amount = 0.0
             total_transactions = 0.0
             for transaction in session.external_transactions:
                 total_transactions += transaction.amount
             session.external_transactions_amount = total_transactions
 
-            # Update cash journal
-            balance_external_transaction = total_transactions - total_daily
+            # Actualizacion del diario de efectivo
+            balance_external_transaction = total_transactions - total_daily_cash
             total_entry_encoding = sum(
                 [line.amount for line in session.cash_register_id.line_ids])
             balance_end = session.cash_register_id.balance_start + total_entry_encoding \
@@ -73,10 +86,12 @@ class PosSession(models.Model):
                                             'balance_end': balance_end,
                                             'difference': difference})
 
-            # Update daily billing
-            session.daily_billing = session.cash_register_total_entry_encoding + total_daily
-            session.daily_billing += sum([line.balance_end for line in session.statement_ids
-                                          if line.journal_id.type != 'cash'])
+            # Actualizacion del total facturado (daily_billing)
+            session.daily_billing = session.cash_register_total_entry_encoding \
+                                    + total_daily_cash \
+                                    + total_daily_bank \
+                                    + session.bank_amount \
+                                    + session.external_transactions_amount
 
 
     @api.depends('config_id', 'statement_ids')
@@ -85,15 +100,16 @@ class PosSession(models.Model):
             Este metodo calcula el dinero que se ha cobrado a través de la caja en tarjeta, etc
             y se lo asigna a una variable para poder visualizarlo fácilmente.
         """
+        # TODO: Borrar comentarios si no dan problemas
         for session in self:
             total_bank_amount = 0
-            total_daily_amount = 0
+            # total_daily_amount = 0
             for journal in session.statement_ids:
                 if journal.journal_type == 'bank':
                     total_bank_amount += journal.total_entry_encoding
-                total_daily_amount += journal.total_entry_encoding
+                # total_daily_amount += journal.total_entry_encoding
             session.bank_amount = total_bank_amount
-            session.daily_billing = total_daily_amount
+            # session.daily_billing = total_daily_amount
 
     @api.multi
     def action_pos_session_validate(self):

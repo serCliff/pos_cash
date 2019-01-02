@@ -12,7 +12,7 @@ class AccountPaymentPos(models.Model):
 
     @api.model
     def create(self, vals):
-        if vals['payment_type'] == 'inbound' and self.env['account.journal'].browse(vals['journal_id']).type == "cash":
+        if vals['payment_type'] == 'inbound' or vals['payment_type'] == 'outbound':
             pos_id = self.env['pos.session'].search(
                 ['&', ('config_id', '=', self.env.user.pos_id.id), ('state', '=', 'opened')])
             vals['pos_invoice_transactions'] = pos_id.id

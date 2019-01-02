@@ -37,8 +37,16 @@
 
                 <!--Campos nuevos-->
                 <xpath expr="//field[@name='cash_register_total_entry_encoding']" position="after">
-                    <label for="daily_invoices_amount" attrs="{'invisible' : [('state', '=', 'opening_control')]}" string="+ Facturas" class="oe_force_bold oe_opening_total"/>
+                    <label for="daily_invoices_amount" attrs="{'invisible' : [('state', '=', 'opening_control')]}" string="+ Facturas Efectivo" class="oe_force_bold oe_opening_total"/>
                     <field name="daily_invoices_amount" nolabel="1" attrs="{'invisible' : [('state', '=', 'opening_control')]}" class="oe_bold oe_pos_total" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+
+                    <label for="daily_invoices_amount_bank" attrs="{'invisible' : [('state', '!=', 'closed')]}" string="+ Facturas Bancos" class="oe_force_bold oe_opening_total"/>
+                    <field name="daily_invoices_amount_bank" nolabel="1" attrs="{'invisible' : [('state', '!=', 'closed')]}" class="oe_bold oe_pos_total" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+
+                    <!--Salidas para cierre en positivo-->
+                    <label for="external_transactions_amount" attrs="{'invisible' : [('state', 'not in', ['closed'])]}" string="+ Salidas a Bancos" class="oe_force_bold"/>
+                    <field name="external_transactions_amount" nolabel="1" attrs="{'invisible' : [('state', 'not in', ['closed'])]}" class="oe_bold" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                    <!--Salidas para conteo en negativo-->
                     <label for="external_transactions_amount" attrs="{'invisible' : [('state', 'in', ['opening_control','closed'])]}" string="- Salidas a Bancos" class="oe_force_bold oe_opening_total"/>
                     <field name="external_transactions_amount" nolabel="1" attrs="{'invisible' : [('state', 'in', ['opening_control','closed'])]}" class="oe_bold oe_pos_total" widget="monetary" options="{'currency_field': 'currency_id'}"/>
                 </xpath>
@@ -83,9 +91,9 @@
                                     <field name="payment_date"/>
                                     <field name="communication"/>
                                     <field name="partner_id"/>
-                                    <field name="payment_type" invisible="0"/>
-                                    <field name="amount" sum="Total"/>
-                                    <field name="journal_id" invisible="1"/>
+                                    <field name="payment_type" invisible="1"/>
+                                    <field name="journal_id" invisible="0"/>
+                                    <field name="amount"/>
                                 </tree>
                             </field>
 
