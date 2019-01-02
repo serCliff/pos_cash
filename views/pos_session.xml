@@ -10,7 +10,8 @@
                 <field name="state" position="after">
                     <field name="cash_register_total_entry_encoding" string="Efectivo Caja" sum="Trans."/>
                     <field name="bank_amount" string="Tarjeta" sum="Tarjeta"/>
-                    <field name="daily_invoices_amount" sum="FV."/>
+                    <field name="daily_invoices_amount" sum="FV. C"/>
+                    <field name="daily_invoices_amount_bank" sum="FV. B"/>
                     <field name="daily_billing" sum="TOTAL"/>
                 </field>
             </field>
