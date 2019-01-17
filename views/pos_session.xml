@@ -77,7 +77,7 @@
                                 <tree string="Daily" editable="bottom">
                                     <field name="payment_type" invisible="1"/>
                                     <field name="payment_date" readonly="1"/>
-                                    <field name="communication"/>
+                                    <field name="communication" required="1"/>
                                     <field name="payment_method_id" invisible="1"/>
                                     <field name="amount" sum="Total"/>
                                     <field name="journal_id" invisible="1"/>
