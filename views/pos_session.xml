@@ -90,7 +90,7 @@
                             <field name="daily_invoices" editable="bottom" readonly="1">
                                 <tree string="Daily" decoration-danger="payment_type == 'outbound'" >
                                     <field name="payment_date"/>
-                                    <field name="communication"/>
+                                    <field name="communication" required="1"/>
                                     <field name="partner_id"/>
                                     <field name="payment_type" invisible="1"/>
                                     <field name="journal_id" invisible="0"/>
