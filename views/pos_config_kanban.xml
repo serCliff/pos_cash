@@ -17,5 +17,82 @@
 
             </field>
         </record>
+
+<!--CASHBOX VIEWS-->
+        <record model="ir.ui.view" id="kanban_bnk_stmt_cashbox">
+            <field name="name">account.bank.statement.cashbox.views.improved</field>
+            <field name="model">account.bank.statement.cashbox</field>
+            <field name="inherit_id" ref="account.view_account_bnk_stmt_cashbox"/>
+            <field name="arch" type="xml">
+
+                <field name="cashbox_lines_ids" position="replace">
+                    <field name="cashbox_lines_ids" mode="tree,kanban" nolabel="1">
+                        <tree editable="bottom" name="tree">
+                            <field name="coin_value"/>
+                            <field name="number"/>
+                            <field name="subtotal" sum="Total"/>
+                        </tree>
+                        <form>
+                            <group>
+                                <field name="coin_value"/>
+                                <field name="number"/>
+                                <field name="subtotal" readonly="1"/>
+                            </group>
+                        </form>
+                        <kanban class="o_kanban_mobile" name="kanban">
+                            <field name="coin_value"/>
+                            <field name="number"/>
+                            <field name="subtotal"/>
+                            <templates>
+                                <t t-name="kanban-box">
+                                    <div t-attf-class="oe_kanban_card oe_kanban_global_click">
+                                        <div class="row">
+                                            <div class="col-xs-12">
+                                                <strong class="o_kanban_record_title">
+                                                    <span>
+                                                        <t t-esc="record.coin_value.value"/> €
+                                                    </span>
+                                                </strong>
+                                            </div>
+                                        </div>
+                                        <div class="row mt8">
+                                            <div class="col-xs-6">
+                                                <strong>
+                                                    <span><t t-esc="record.number.value"/> uds.</span>
+                                                </strong>
+                                            </div>
+                                            <div class="col-xs-6 text-right">
+                                                <span><t t-esc="record.subtotal.value"/> €</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </t>
+                            </templates>
+                        </kanban>
+                    </field>
+
+                </field>
+
+            </field>
+        </record>
+
+<!--COMMERCIAL PERMISSIONS -->
+       <record model="ir.ui.view" id="pos_cash_balance_permissions">
+          <field name="name">account.bank.statement.cashbox.tree.permissions.pos_cash</field>
+          <field name="model">account.bank.statement.cashbox</field>
+          <field name="inherit_id" ref="pos_cash.kanban_bnk_stmt_cashbox"/>
+          <field name="groups_id" eval="[(4, ref('am_personalizations.group_commercial'))]"/>
+          <field name="arch" type="xml">
+
+              <!-- Bloquear crear lineas de cashbox-->
+              <xpath expr="//tree[@name='tree']" position="attributes">
+                  <attribute name="create">false</attribute>
+              </xpath>
+              <xpath expr="//kanban[@name='kanban']" position="attributes">
+                  <attribute name="create">false</attribute>
+              </xpath>
+
+          </field>
+       </record>
     </data>
 </odoo>
