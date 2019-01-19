@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 {
-    'name': "pos_cash",
+    'name': "POS CASH",
 
     'summary': """
         Gestión mejorada del punto de venta para realizar el recuento de caja de toda la compañía.""",
@@ -21,10 +21,10 @@
 
 
     'category': 'pos',
-    'version': '0.2',
+    'version': '0.3',
 
     # any module necessary for this one to work correctly
-    'depends': ['point_of_sale', 'account', 'account_cancel'],
+    'depends': ['point_of_sale', 'account', 'account_cancel', 'am_personalizations'],
 
     # always loaded
     'data': [

@@ -16,7 +16,8 @@ class PosSession(models.Model):
                                             help="Total cobrado a través de bancos de facturas en el día")
 
     daily_invoices = fields.One2many("account.payment", "pos_invoice_transactions",
-                                     string="Facturas del Día", help="Facturas cobradas en el día")
+                                     string="Facturas del Día", help="Facturas cobradas en el día",
+                                     domain=[('state', 'not in', ['draft','cancelled'])])
 
     external_transactions_amount = fields.Monetary("Salidas de Efectivo", compute="_compute_daily_invoices",
                                                    help="Total de salidas de efectivos a bancos")
@@ -173,5 +174,4 @@ class AccountBankStmtCashWizard(models.Model):
                             'cashbox_end_id': self.id})
 
         return {'type': 'ir.actions.act_window_close'}
-
 
