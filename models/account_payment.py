@@ -12,9 +12,12 @@ class AccountPaymentPos(models.Model):
 
     @api.model
     def create(self, vals):
-        if vals['payment_type'] == 'inbound' or vals['payment_type'] == 'outbound':
+        if vals['payment_type'] == 'inbound' or vals['payment_type'] == 'outbound' and\
+                'partner_type' in vals and vals['partner_type'] == 'customer' and\
+                'state' not in vals:
+            user_id = self.env['res.users'].browse(self._context.get('uid'))
             pos_id = self.env['pos.session'].search(
-                ['&', ('config_id', '=', self.env.user.pos_id.id), ('state', '=', 'opened')])
+                ['&', ('config_id', '=', user_id.pos_id.id), ('state', '=', 'opened')])
             vals['pos_invoice_transactions'] = pos_id.id
 
         return super(AccountPaymentPos, self).create(vals)
