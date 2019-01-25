@@ -14,6 +14,8 @@
         Permitirá gestionar salidas de efectivo de la caja a bancos.
         
         Mostrará de mejor manera la información económica del día.
+        
+        Corrige los inicios de las cajas, busca aquellas de este mismo usuario, o de uno de la misma ciudad
     """,
 
     'author': "Sergio Del Castillo",
@@ -21,7 +23,7 @@
 
 
     'category': 'pos',
-    'version': '0.3',
+    'version': '0.4',
 
     # any module necessary for this one to work correctly
     'depends': ['point_of_sale', 'account', 'account_cancel', 'am_personalizations'],

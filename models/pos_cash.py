@@ -94,7 +94,6 @@ class PosSession(models.Model):
                                     + session.bank_amount \
                                     + session.external_transactions_amount
 
-
     @api.depends('config_id', 'statement_ids')
     def _compute_bank_journals(self):
         """
@@ -124,6 +123,7 @@ class PosSession(models.Model):
 
         return super(PosSession, self).action_pos_session_validate()
 
+
 class AccountBankStatement(models.Model):
 
     @api.one
@@ -133,10 +133,23 @@ class AccountBankStatement(models.Model):
         self.balance_end = self.balance_start + self.total_entry_encoding - self.balance_external_transaction
         self.difference = self.balance_end_real - self.balance_end
 
+    @api.multi
+    def _get_opening_balance(self, journal_id):
+        """
+        Método sobre escrito para que busque específicamente la anterior caja de un usuario de la misma ciudad.
+        :param journal_id:
+        :return:
+        """
+        last_bnk_stmt = self.search([('journal_id', '=', journal_id),
+                                     ('user_id.pos_id', '=', self.env.user.pos_id.id)],
+                                    limit=1)
+        if last_bnk_stmt:
+            return last_bnk_stmt.balance_end
+        return 0
+
     _inherit = "account.bank.statement"
 
     balance_external_transaction = fields.Monetary('External Transactions')
-
 
 
 class AccountBankStmtCashWizard(models.Model):
