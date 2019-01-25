@@ -13,5 +13,20 @@
             </field>
         </record>
 
+        <record model="ir.ui.view" id="res_users_pos_config">
+            <field name="name">res.users.pos_id.conf</field>
+            <field name="model">res.users</field>
+            <field name="groups_id" eval="[(4, ref('am_personalizations.group_manager')),
+                                           (4, ref('am_personalizations.group_director'))]"/>
+            <field name="inherit_id" ref="base.view_users_form_simple_modif"/>
+            <field name="arch" type="xml">
+                <group name="preferences" position="after">
+                    <group string="Punto de venta">
+                        <field name="pos_id" widget="selection" required="True" options="{'no_create': True}"/>
+                    </group>
+                </group>
+            </field>
+        </record>
+
   </data>
 </odoo>
