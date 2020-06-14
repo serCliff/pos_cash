@@ -17,7 +17,8 @@ class AccountPaymentPos(models.Model):
                 'state' not in vals:
             user_id = self.env['res.users'].browse(self._context.get('uid'))
             pos_id = self.env['pos.session'].search(
-                ['&', ('config_id', '=', user_id.pos_id.id), ('state', '=', 'opened')])
+                ['&', ('config_id', '=', user_id.pos_id.id), ('state', '=', 'opened')],
+                limit=1)
             vals['pos_invoice_transactions'] = pos_id.id
 
         return super(AccountPaymentPos, self).create(vals)
@@ -25,17 +26,21 @@ class AccountPaymentPos(models.Model):
     @api.onchange('payment_type')
     def onch_set_journal(self):
         """ Metodo para preasignar los diarios cuando se hacen salidas a bancos desde el punto de venta """
+        apm_env = self.env['account.payment.method']
         for payment in self:
             if payment.payment_type == "transfer":
                 origin_id = self.env['account.journal'].search(
                     ['&', ('journal_user', '=', True), ('type', '=', 'cash'),
-                     ('company_id', '=', self.env.user.company_id.id)])[0]
+                     ('company_id', '=', self.env.user.company_id.id)],
+                     limit=1)
                 destination_id = self.env['account.journal'].search(
                     ['&', ('journal_user', '=', True), ('type', '=', 'bank'),
-                     ('company_id', '=', self.env.user.company_id.id)])[0]
+                     ('company_id', '=', self.env.user.company_id.id)], 
+                     limit=1)
 
-                payment_method = self.env['account.payment.method'].search([('code', '=', 'manual'),
-                                                                            ('payment_type', '=', 'outbound')])[0]
+                payment_method = apm_env.search([('code', '=', 'manual'), 
+                                                ('payment_type', '=', 'outbound')],
+                                                limit=1) 
                 payment.journal_id = origin_id.id
                 payment.destination_journal_id = destination_id.id
                 payment.payment_method_id = payment_method.id
